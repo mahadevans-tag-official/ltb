@@ -14,9 +14,11 @@ const regionCollection = [
 const Route = () => {
   const ref = useRef();
 
-  const [activeSheet, setActiveSheet] = useState();
+  const [workbook, setWorkbook] = useState();
 
-  const [, setRegion] = useState(regionCollection[0]);
+  const [sheetNameCollection, setSheetNameCollection] = useState([]);
+
+  const [sheetActive, setSheetActive] = useState(/** @type {any} */ (null));
 
   const vizInitialize = useCallback(() => {
     new globalThis.tableau.Viz(
@@ -34,10 +36,20 @@ const Route = () => {
           hideToolbar: true,
           onFirstInteractive(_tableau) {
             const viz = _tableau.getViz();
+
             const workbook = viz.getWorkbook();
+
             const activeSheet = workbook.getActiveSheet();
 
-            setActiveSheet(activeSheet);
+            setWorkbook(workbook);
+
+            setSheetNameCollection(
+              workbook.getPublishedSheetsInfo().map((sheet) => {
+                return Object.values(sheet)[0].name;
+              })
+            );
+
+            setSheetActive(activeSheet);
           }
         };
       })()
@@ -53,25 +65,42 @@ const Route = () => {
       <div className='w-100 h-100 d-flex flex-column'>
         <div className='viz'></div>
 
-        <div>
+        <div className='d-flex'>
+          <select
+            className='form-select'
+            onChange={(event) => {
+              /** @type {any} */ (workbook).activateSheetAsync(
+                event.target.value
+              );
+            }}
+          >
+            {sheetNameCollection.map((sheetName, index) => {
+              return (
+                <option key={index} value={sheetName}>
+                  {sheetName}
+                </option>
+              );
+            })}
+          </select>
+
           <select
             className='form-select'
             onChange={(event) => {
               const region = event.target.value;
 
-              setRegion(region);
-
-              /** @type {any} */ (activeSheet).applyFilterAsync(
-                'Region',
-                region,
-                globalThis.tableau.FilterUpdateType.REPLACE
-              );
+              region !== regionCollection[0]
+                ? sheetActive.applyFilterAsync(
+                    'Region',
+                    region,
+                    globalThis.tableau.FilterUpdateType.REPLACE
+                  )
+                : sheetActive.clearFilterAsync('Region');
             }}
           >
-            {regionCollection.map((_region, index) => {
+            {regionCollection.map((region, index) => {
               return (
-                <option key={index} value={_region}>
-                  {_region}
+                <option key={index} value={region}>
+                  {region}
                 </option>
               );
             })}
