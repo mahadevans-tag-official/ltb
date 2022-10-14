@@ -1,6 +1,8 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import $ from 'jquery';
 
+const regionFilterName = 'Region';
+
 const regionCollection = [
   'select region',
   'Europe',
@@ -12,22 +14,22 @@ const regionCollection = [
 ];
 
 const Route = () => {
-  const ref = useRef();
+  const ref = useRef(/** @type {any} */ (null));
 
-  const [workbook, setWorkbook] = useState();
+  const [workbook, setWorkbook] = useState(/** @type {any} */ (null));
 
   const [sheetNameCollection, setSheetNameCollection] = useState([]);
 
   const [sheetActive, setSheetActive] = useState(/** @type {any} */ (null));
+
+  const [regionFilterShow, setRegionFilterShow] = useState(false);
 
   const vizInitialize = useCallback(() => {
     new globalThis.tableau.Viz(
       $(ref.current).find('.viz').get(0),
       'https://public.tableau.com/views/WorldIndicators/GDPpercapita',
       (() => {
-        const { width, height } = /** @type {any} */ (
-          ref.current
-        ).getBoundingClientRect();
+        const { width, height } = ref.current.getBoundingClientRect();
 
         return {
           width,
@@ -37,9 +39,16 @@ const Route = () => {
           onFirstInteractive(_tableau) {
             const viz = _tableau.getViz();
 
+            viz.addEventListener(
+              globalThis.tableau.TableauEventName.TAB_SWITCH,
+              () => {
+                setSheetActive(workbook.getActiveSheet());
+              }
+            );
+
             const workbook = viz.getWorkbook();
 
-            const activeSheet = workbook.getActiveSheet();
+            const sheetActive = workbook.getActiveSheet();
 
             setWorkbook(workbook);
 
@@ -49,7 +58,7 @@ const Route = () => {
               })
             );
 
-            setSheetActive(activeSheet);
+            setSheetActive(sheetActive);
           }
         };
       })()
@@ -60,6 +69,13 @@ const Route = () => {
     vizInitialize();
   }, []);
 
+  useEffect(() => {
+    sheetActive &&
+      sheetActive.getFiltersAsync().then((result) => {
+        setRegionFilterShow(result.has(regionFilterName));
+      });
+  }, [sheetActive]);
+
   return (
     <div ref={ref} className='Route' css={{ width: '100%', height: 700 }}>
       <div className='w-100 h-100 d-flex flex-column'>
@@ -69,9 +85,9 @@ const Route = () => {
           <select
             className='form-select'
             onChange={(event) => {
-              /** @type {any} */ (workbook).activateSheetAsync(
-                event.target.value
-              );
+              const sheetName = event.target.value;
+
+              workbook.activateSheetAsync(sheetName);
             }}
           >
             {sheetNameCollection.map((sheetName, index) => {
@@ -83,28 +99,30 @@ const Route = () => {
             })}
           </select>
 
-          <select
-            className='form-select'
-            onChange={(event) => {
-              const region = event.target.value;
+          {regionFilterShow && (
+            <select
+              className='form-select'
+              onChange={(event) => {
+                const region = event.target.value;
 
-              region !== regionCollection[0]
-                ? sheetActive.applyFilterAsync(
-                    'Region',
-                    region,
-                    globalThis.tableau.FilterUpdateType.REPLACE
-                  )
-                : sheetActive.clearFilterAsync('Region');
-            }}
-          >
-            {regionCollection.map((region, index) => {
-              return (
-                <option key={index} value={region}>
-                  {region}
-                </option>
-              );
-            })}
-          </select>
+                region !== regionCollection[0]
+                  ? sheetActive.applyFilterAsync(
+                      regionFilterName,
+                      region,
+                      globalThis.tableau.FilterUpdateType.REPLACE
+                    )
+                  : sheetActive.clearFilterAsync(regionFilterName);
+              }}
+            >
+              {regionCollection.map((region, index) => {
+                return (
+                  <option key={index} value={region}>
+                    {region}
+                  </option>
+                );
+              })}
+            </select>
+          )}
         </div>
       </div>
     </div>
