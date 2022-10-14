@@ -3,26 +3,38 @@ import $ from 'jquery';
 
 const regionFilterName = 'Region';
 
-const regionCollection = [
-  'select region',
-  'Europe',
-  'Middle East',
-  'The Americas',
-  'Oceania',
-  'Asia',
-  'Africa'
-];
+const regionFilterValueBlank = 'select region';
 
 const Route = () => {
   const ref = useRef(/** @type {any} */ (null));
 
-  const [workbook, setWorkbook] = useState(/** @type {any} */ (null));
+  const [workbook, workbookSet] = useState(/** @type {any} */ (null));
 
-  const [sheetNameCollection, setSheetNameCollection] = useState([]);
+  const [sheetNameCollection, sheetNameCollectionSet] = useState([]);
 
-  const [sheetActive, setSheetActive] = useState(/** @type {any} */ (null));
+  const [sheetActive, sheetActiveSet] = useState(/** @type {any} */ (null));
 
-  const [regionFilterShow, setRegionFilterShow] = useState(false);
+  const [regionFilterShow, regionFilterShowSet] = useState(false);
+
+  const [regionFilterValueCollection, setRegionFilterValueCollection] =
+    useState([]);
+
+  const regionFilterInitialize = useCallback((_sheetActive) => {
+    _sheetActive.getFiltersAsync().then((result) => {
+      const _regionFilterShow = result.has(regionFilterName);
+
+      _regionFilterShow &&
+        setRegionFilterValueCollection([
+          regionFilterValueBlank,
+          ...result
+            .get(regionFilterName)
+            .getAppliedValues()
+            .map(({ value }) => value)
+        ]);
+
+      regionFilterShowSet(_regionFilterShow);
+    });
+  }, []);
 
   const vizInitialize = useCallback(() => {
     new globalThis.tableau.Viz(
@@ -39,26 +51,21 @@ const Route = () => {
           onFirstInteractive(_tableau) {
             const viz = _tableau.getViz();
 
-            viz.addEventListener(
-              globalThis.tableau.TableauEventName.TAB_SWITCH,
-              () => {
-                setSheetActive(workbook.getActiveSheet());
-              }
-            );
+            const _workbook = viz.getWorkbook();
 
-            const workbook = viz.getWorkbook();
+            const _sheetActive = _workbook.getActiveSheet();
 
-            const sheetActive = workbook.getActiveSheet();
-
-            setWorkbook(workbook);
-
-            setSheetNameCollection(
-              workbook.getPublishedSheetsInfo().map((sheet) => {
+            sheetNameCollectionSet(
+              _workbook.getPublishedSheetsInfo().map((sheet) => {
                 return Object.values(sheet)[0].name;
               })
             );
 
-            setSheetActive(sheetActive);
+            regionFilterInitialize(_sheetActive);
+
+            sheetActiveSet(_sheetActive);
+
+            workbookSet(_workbook);
           }
         };
       })()
@@ -68,13 +75,6 @@ const Route = () => {
   useEffect(() => {
     vizInitialize();
   }, []);
-
-  useEffect(() => {
-    sheetActive &&
-      sheetActive.getFiltersAsync().then((result) => {
-        setRegionFilterShow(result.has(regionFilterName));
-      });
-  }, [sheetActive]);
 
   return (
     <div ref={ref} className='Route' css={{ width: '100%', height: 700 }}>
@@ -87,7 +87,11 @@ const Route = () => {
             onChange={(event) => {
               const sheetName = event.target.value;
 
-              workbook.activateSheetAsync(sheetName);
+              workbook.activateSheetAsync(sheetName).then((_sheetActive) => {
+                regionFilterInitialize(_sheetActive);
+
+                sheetActiveSet(_sheetActive);
+              });
             }}
           >
             {sheetNameCollection.map((sheetName, index) => {
@@ -105,7 +109,7 @@ const Route = () => {
               onChange={(event) => {
                 const region = event.target.value;
 
-                region !== regionCollection[0]
+                region !== regionFilterValueBlank
                   ? sheetActive.applyFilterAsync(
                       regionFilterName,
                       region,
@@ -114,7 +118,7 @@ const Route = () => {
                   : sheetActive.clearFilterAsync(regionFilterName);
               }}
             >
-              {regionCollection.map((region, index) => {
+              {regionFilterValueCollection.map((region, index) => {
                 return (
                   <option key={index} value={region}>
                     {region}
