@@ -5,6 +5,8 @@ const regionFilterName = 'Region';
 
 const regionFilterValueBlank = 'select region';
 
+const regionFilterValueNone = 'no region';
+
 const Route = () => {
   const ref = useRef(/** @type {any} */ (null));
 
@@ -23,14 +25,17 @@ const Route = () => {
     _sheetActive.getFiltersAsync().then((result) => {
       const _regionFilterDisabled = !result.has(regionFilterName);
 
-      !_regionFilterDisabled &&
-        setRegionFilterValueCollection([
-          regionFilterValueBlank,
-          ...result
-            .get(regionFilterName)
-            .getAppliedValues()
-            .map(({ value }) => value)
-        ]);
+      setRegionFilterValueCollection(
+        !_regionFilterDisabled
+          ? [
+              regionFilterValueBlank,
+              ...result
+                .get(regionFilterName)
+                .getAppliedValues()
+                .map(({ value }) => value)
+            ]
+          : [regionFilterValueNone]
+      );
 
       regionFilterDisabledSet(_regionFilterDisabled);
     });
