@@ -14,16 +14,16 @@ const Route = () => {
 
   const [sheetActive, sheetActiveSet] = useState(/** @type {any} */ (null));
 
-  const [regionFilterShow, regionFilterShowSet] = useState(false);
+  const [regionFilterDisabled, regionFilterDisabledSet] = useState(false);
 
   const [regionFilterValueCollection, setRegionFilterValueCollection] =
     useState([]);
 
   const regionFilterInitialize = useCallback((_sheetActive) => {
     _sheetActive.getFiltersAsync().then((result) => {
-      const _regionFilterShow = result.has(regionFilterName);
+      const _regionFilterDisabled = !result.has(regionFilterName);
 
-      _regionFilterShow &&
+      !_regionFilterDisabled &&
         setRegionFilterValueCollection([
           regionFilterValueBlank,
           ...result
@@ -32,7 +32,7 @@ const Route = () => {
             .map(({ value }) => value)
         ]);
 
-      regionFilterShowSet(_regionFilterShow);
+      regionFilterDisabledSet(_regionFilterDisabled);
     });
   }, []);
 
@@ -103,30 +103,29 @@ const Route = () => {
             })}
           </select>
 
-          {regionFilterShow && (
-            <select
-              className='form-select'
-              onChange={(event) => {
-                const region = event.target.value;
+          <select
+            className='form-select'
+            disabled={regionFilterDisabled}
+            onChange={(event) => {
+              const region = event.target.value;
 
-                region !== regionFilterValueBlank
-                  ? sheetActive.applyFilterAsync(
-                      regionFilterName,
-                      region,
-                      globalThis.tableau.FilterUpdateType.REPLACE
-                    )
-                  : sheetActive.clearFilterAsync(regionFilterName);
-              }}
-            >
-              {regionFilterValueCollection.map((region, index) => {
-                return (
-                  <option key={index} value={region}>
-                    {region}
-                  </option>
-                );
-              })}
-            </select>
-          )}
+              region !== regionFilterValueBlank
+                ? sheetActive.applyFilterAsync(
+                    regionFilterName,
+                    region,
+                    globalThis.tableau.FilterUpdateType.REPLACE
+                  )
+                : sheetActive.clearFilterAsync(regionFilterName);
+            }}
+          >
+            {regionFilterValueCollection.map((region, index) => {
+              return (
+                <option key={index} value={region}>
+                  {region}
+                </option>
+              );
+            })}
+          </select>
         </div>
       </div>
     </div>
