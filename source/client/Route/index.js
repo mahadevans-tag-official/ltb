@@ -70,11 +70,11 @@ const Route = () => {
         };
       })()
     );
-  }, []);
+  }, [regionFilterInitialize]);
 
   useEffect(() => {
     vizInitialize();
-  }, []);
+  }, [vizInitialize]);
 
   return (
     <div ref={ref} className='Route' css={{ width: '100%', height: 700 }}>
